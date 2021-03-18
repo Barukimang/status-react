@@ -61,7 +61,8 @@
   {::navigate-reset config})
 
 (fx/defn navigate-replace
-  {:events [:navigate-replace]}
+  {:events [:navigate-replace]
+   :interceptors [anon-metrics/catch-events]}
   [{:keys [db]} go-to-view-id screen-params]
   (let [db (cond-> (assoc db :view-id go-to-view-id)
              (seq screen-params)

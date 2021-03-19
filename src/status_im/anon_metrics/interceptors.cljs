@@ -10,12 +10,17 @@
       (let [filtered-params (filter (fn [[k v]] (= :screen k)) params)]
       [
        (log/info :catch-event-fn event-type view-id params filtered-params)
-       (comment
-        (json-rpc/call {
-                        :method     "appmetrics_validateAppMetrics"
-                        :params     params
-                        :on-success log/debug "appmetrics_validateAppMetrics successful"
-                        :on-failure log/debug "appmetrics_validateAppMetrics failure"}))
+       (json-rpc/call {
+                       :method     "appmetrics_validateAppMetrics"
+                       :params     [[{:event event-type
+                                      :val {
+                                            :view_id view-id
+                                            :params {:screen filtered-params}
+                                            }
+                                      :app_version "" ;; TODO(samyoul) work out how to get this
+                                      :os ""}]] ;; TODO(samyoul) work out how to get this
+                       :on-success log/debug "appmetrics_validateAppMetrics successful"
+                       :on-failure log/debug "appmetrics_validateAppMetrics failure"})
        ])))
 
 (def catch-events

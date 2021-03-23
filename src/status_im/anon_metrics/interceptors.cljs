@@ -6,22 +6,22 @@
             [status-im.utils.build :as build]
             [status-im.anon-metrics.transformers :as txf]))
 
-(defn catch-events-fn [context]
+(defn transform-and-log [context]
   (log/info :catch-event-fn (get-in context [:coeffects :event]))
   (when-let [transformed-payload (txf/transform context)]
-       (json-rpc/call {:method "appmetrics_validateAppMetrics"
+       (json-rpc/call {:method "appmetrics_saveAppMetrics"
                        :params [[{:event (get-in context [:coeffects :event :event-type])
-                                  :val transformed-payload
+                                  :value transformed-payload
                                   :app_version build/version
                                   :os platform/os}]]
                        :on-failure log/error})))
 
 (defn catch-events-before [context]
   (log/info "catch-events/interceptor fired")
-  (catch-events-fn context)
+  (transform-and-log context)
   context)
 
 (def catch-events
   (->interceptor
     :id     :catch-events
-    :before catch-events))
+    :before catch-events-before))

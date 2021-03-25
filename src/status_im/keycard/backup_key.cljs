@@ -32,5 +32,5 @@
                               :selected-storage-type :advanced)
                       (assoc-in [:keycard :flow] :recovery)
                       (update :multiaccounts/key-storage dissoc :seed-phrase))
-              :dismiss-keyboard nil}
+             :dismiss-keyboard nil}
             (navigation/navigate-to-cofx :keycard-onboarding-intro nil)))

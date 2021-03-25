@@ -100,14 +100,12 @@
                                :title    (i18n/label :t/unpair-card)
                                :on-press #(re-frame/dispatch [:keycard-settings.ui/unpair-card-pressed])}]])])]
                                         ; NOTE: Reset card is hidden until multiaccount removal will be implemented
-      #_(when pairing
-          [react/view {:margin-bottom 35
-                       :margin-left   16}
-           [quo/list-item {:icon     :main-icons/warning
-                           :theme    :negative
-                           :size     :small
-                           :title    (i18n/label :t/reset-card)
-                           :on-press #(re-frame/dispatch [:keycard-settings.ui/reset-card-pressed])}]])]]))
+      (when pairing
+        [:<>
+         [quo/list-item {:icon     :main-icons/keycard
+                         :size     :small
+                         :title    (i18n/label :t/keycard-backup)
+                         :on-press #(re-frame/dispatch [:keycard-settings.ui/backup-card-pressed])}]])]]))
 
 (defn reset-pin []
   [keycard.views/login-pin

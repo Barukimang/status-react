@@ -13,7 +13,9 @@
             [status-im.ui.components.topbar :as topbar]
             [status-im.utils.debounce :as debounce]
             [status-im.utils.utils :as utils]
-            [reagent.core :as reagent])
+            [reagent.core :as reagent]
+            [quo.react-native :as rn]
+            [clojure.string :as str])
   (:require-macros [status-im.utils.views :as views]))
 
 (defn- render-row [row]
@@ -76,8 +78,7 @@
                                                     :handler :contact/qr-code-scanned}])}]}]
      [react/view {:flex-direction :row
                   :padding        16}
-      [react/view {:flex          1
-                   :padding-right 16}
+      [react/view {:flex          1}
        [quo/text-input
         {:on-change-text
          #(do
@@ -90,13 +91,24 @@
          :show-cancel         false
          :accessibility-label :enter-contact-code-input
          :auto-capitalize     :none
-         :return-key-type     :go}]]
-      [react/view {:justify-content :center
-                   :align-items     :center}
-       [input-icon state false nil]]]
-     [react/view {:min-height 30 :justify-content :flex-end}
+         :return-key-type     :go}]]]
+     [react/view {:justify-content :flex-end}
+      [list/flat-list {:data                      contacts
+                       :key-fn                    :address
+                       :render-fn                 render-row
+                       :enableEmptySections       true
+                       :keyboardShouldPersistTaps :always}]]
+     [react/view
+      [quo/text {:style {:margin-horizontal 16
+                         :margin-vertical 14}
+                 :size  :base
+                 :align :left
+                 :color :secondary}
+       "Non contacts"]
+      (when (= state :searching)
+        [rn/activity-indicator])
       [quo/text {:style {:margin-horizontal 16}
-                 :size  :small
+                 :size  :base
                  :align :center
                  :color :secondary}
        (cond (= state :error)
@@ -110,15 +122,18 @@
 
              :else "")
        (when (= state :valid)
-         [quo/text {:monospace true
-                    :size      :inherit
-                    :color     :inherit}
-          (utils/get-shortened-address public-key)])]]
-     [list/flat-list {:data                      contacts
-                      :key-fn                    :address
-                      :render-fn                 render-row
-                      :enableEmptySections       true
-                      :keyboardShouldPersistTaps :always}]]))
+         [quo/list-item
+          {:title    ens-name
+           :subtitle (str (str (str/trim (subs (gfycat/generate-gfy public-key) 0 30)) "...")
+                          " • "
+                          (utils/get-shortened-address public-key))
+           :icon     [chat-icon/contact-icon-contacts-tab
+                      (multiaccounts/displayed-photo public-key)]
+           :icon-container-style {:padding-horizontal 0}
+           :container-style {:padding-horizontal 0}
+           :chevron  false
+           :on-press #(re-frame/dispatch [:chat.ui/start-chat
+                                          (:public-key public-key)])}])]]]))
 
 (defn- nickname-input [entered-nickname]
   [quo/text-input
@@ -178,6 +193,7 @@
              :else "")]]
      [react/text {:style {:margin-horizontal 16 :color colors/gray}}
       (i18n/label :t/nickname-description)]
+     
      [react/view {:padding 16}
 
       [nickname-input entered-nickname]

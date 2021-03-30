@@ -23,5 +23,5 @@
 
 (def catch-events
   (->interceptor
-    :id     :catch-events
-    :before catch-events-before))
+   :id     :catch-events
+   :before catch-events-before))

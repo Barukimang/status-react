@@ -9,12 +9,12 @@
 (defn transform-and-log [context]
   (log/info :catch-event-fn (get-in context [:coeffects :event]))
   (when-let [transformed-payload (txf/transform context)]
-       (json-rpc/call {:method "appmetrics_saveAppMetrics"
-                       :params [[{:event (get-in context [:coeffects :event :event-type])
-                                  :value transformed-payload
-                                  :app_version build/version
-                                  :os platform/os}]]
-                       :on-failure log/error})))
+    (json-rpc/call {:method "appmetrics_saveAppMetrics"
+                    :params [[{:event (-> context :coeffects :event first)
+                               :value transformed-payload
+                               :app_version build/version
+                               :os platform/os}]]
+                    :on-failure #(log/error)})))
 
 (defn catch-events-before [context]
   (log/info "catch-events/interceptor fired")

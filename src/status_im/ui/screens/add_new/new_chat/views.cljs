@@ -57,8 +57,6 @@
        [icons/icon icon {:color colors/white-persist}]])))
 
 (defn get-validation-label [value]
-  (println "printing value...")
-  (println value)
   (case value
     :invalid
     (i18n/label :t/user-not-found)
@@ -105,8 +103,6 @@
                      {:on-change-text
                       #(do
                          (reset! search-value %)
-                         (println %)
-                         (println (is-valid-username? %))
                          (re-frame/dispatch [:set-in [:contacts/new-identity :state] :searching])
                          (debounce/debounce-and-dispatch [:new-chat/set-new-identity %] 600))
                       :on-submit-editing
@@ -150,36 +146,22 @@
                      (when (and (= state :searching)
                                 (is-valid-username? @search-value))
                        [rn/activity-indicator])
-                     [quo/text {:style {:margin-horizontal 16}
-                                :size  :base
-                                :align :center
-                                :color :secondary}
-                      (if (is-valid-username? @search-value)
-                        (cond (= state :error)
-                              (get-validation-label error)
-
-                              (= state :valid)
-                              (str (if ens-name
-                                     ens-name
-                                     (gfycat/generate-gfy public-key))
-                                   " • ")
-
-                              :else "")
-                        "Invalid username or chat key")
-                      (when (= state :valid)
+                      (if (= state :valid)
                         [quo/list-item
-                         {:key-fn   :address
-                          :title    ens-name
-                          :subtitle (str (str (string/trim (subs (gfycat/generate-gfy public-key) 0 30)) "...")
-                                         " • "
-                                         (utils/get-shortened-address public-key))
+                         {:title    ens-name
+                          :subtitle-left (gfycat/generate-gfy public-key)
+                          :subtitle public-key
                           :icon     [chat-icon/contact-icon-contacts-tab
                                      (multiaccounts/displayed-photo public-key)]
-                          :icon-container-style {:padding-horizontal 0}
-                          :container-style {:padding-horizontal 0}
-                          :chevron  false
-                          :on-press #(re-frame/dispatch [:chat.ui/start-chat
-                                                         (:public-key public-key)])}])]])]))
+                          :on-press #(re-frame/dispatch [:chat.ui/start-chat public-key])}]
+                        [quo/text {:style {:margin-horizontal 16}
+                                   :size  :base
+                                   :align :center
+                                   :color :secondary}
+                         (if (is-valid-username? @search-value)
+                           (when (= state :error)
+                             (get-validation-label error))
+                           "Invalid username or chat key")])])]))
 
 (defn- nickname-input [entered-nickname]
   [quo/text-input

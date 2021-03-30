@@ -15,17 +15,16 @@
             [status-im.utils.utils :as utils]
             [reagent.core :as reagent]
             [quo.react-native :as rn]
-            [clojure.string :as str])
+            [clojure.string :as string]
+            [status-im.ui.components.invite.views :as invite])
   (:require-macros [status-im.utils.views :as views]))
 
 (defn- render-row [row]
-  (let [[first-name second-name] (multiaccounts/contact-two-names row false)]
+  (let [first-name (first (multiaccounts/contact-two-names row false))]
     [quo/list-item
      {:title    first-name
-      :subtitle second-name
       :icon     [chat-icon/contact-icon-contacts-tab
                  (multiaccounts/displayed-photo row)]
-      :chevron  true
       :on-press #(re-frame/dispatch [:chat.ui/start-chat
                                      (:public-key row)])}]))
 
@@ -63,9 +62,22 @@
     :yourself
     (i18n/label :t/can-not-add-yourself)))
 
+(defn filter-contacts [filter-text contacts]
+  (let [lower-filter-text (string/lower-case (str filter-text))
+        filter-fn         (fn [{:keys [name alias nickname]}]
+                            (or
+                             (string/includes? (string/lower-case (str name)) lower-filter-text)
+                             (string/includes? (string/lower-case (str alias)) lower-filter-text)
+                             (when nickname
+                               (string/includes? (string/lower-case (str nickname)) lower-filter-text))))]
+    (if filter-text
+      (filter filter-fn contacts)
+      contacts)))
+
 (views/defview new-chat []
   (views/letsubs [contacts      [:contacts/active]
-                  {:keys [state ens-name public-key error]} [:contacts/new-identity]]
+                  {:keys [state ens-name public-key error]} [:contacts/new-identity]
+                  search-value (reagent/atom "")]
     [react/view {:style {:flex 1}}
      [topbar/topbar
       {:title  (i18n/label :t/new-chat)
@@ -82,6 +94,7 @@
        [quo/text-input
         {:on-change-text
          #(do
+            (reset! search-value %)
             (re-frame/dispatch [:set-in [:contacts/new-identity :state] :searching])
             (debounce/debounce-and-dispatch [:new-chat/set-new-identity %] 600))
          :on-submit-editing
@@ -92,48 +105,66 @@
          :accessibility-label :enter-contact-code-input
          :auto-capitalize     :none
          :return-key-type     :go}]]]
-     [react/view {:justify-content :flex-end}
-      [list/flat-list {:data                      contacts
-                       :key-fn                    :address
-                       :render-fn                 render-row
-                       :enableEmptySections       true
-                       :keyboardShouldPersistTaps :always}]]
-     [react/view
-      [quo/text {:style {:margin-horizontal 16
-                         :margin-vertical 14}
-                 :size  :base
-                 :align :left
-                 :color :secondary}
-       "Non contacts"]
-      (when (= state :searching)
-        [rn/activity-indicator])
-      [quo/text {:style {:margin-horizontal 16}
-                 :size  :base
-                 :align :center
-                 :color :secondary}
-       (cond (= state :error)
-             (get-validation-label error)
+     [react/view (if (and
+                      (= (count contacts) 0)
+                      (= @search-value ""))
+                   {:flex 1}
+                   {:justify-content :flex-end})
+      (if (and
+           (= (count contacts) 0)
+           (= @search-value ""))
+        [react/view {:flex 1
+                     :align-items :center
+                     :padding-horizontal 58
+                     :padding-top 160}
+         [quo/text {:size  :base
+                    :align :center
+                    :color :secondary}
+          "You don’t have any contacts yet.\nInvite your friends to start chatting."]
+         [invite/button]]
+        [list/flat-list {:data                      (filter-contacts @search-value contacts)
+                         :key-fn                    :address
+                         :render-fn                 render-row
+                         :enableEmptySections       true
+                         :keyboardShouldPersistTaps :always}])]
+     (when-not (= @search-value "")
+       [react/view
+        [quo/text {:style {:margin-horizontal 16
+                           :margin-vertical 14}
+                   :size  :base
+                   :align :left
+                   :color :secondary}
+         "Non contacts"]
+        (when (= state :searching)
+          [rn/activity-indicator])
+        [quo/text {:style {:margin-horizontal 16}
+                   :size  :base
+                   :align :center
+                   :color :secondary}
+         (cond (= state :error)
+               (get-validation-label error)
 
-             (= state :valid)
-             (str (if ens-name
-                    ens-name
-                    (gfycat/generate-gfy public-key))
-                  " • ")
+               (= state :valid)
+               (str (if ens-name
+                      ens-name
+                      (gfycat/generate-gfy public-key))
+                    " • ")
 
-             :else "")
-       (when (= state :valid)
-         [quo/list-item
-          {:title    ens-name
-           :subtitle (str (str (str/trim (subs (gfycat/generate-gfy public-key) 0 30)) "...")
-                          " • "
-                          (utils/get-shortened-address public-key))
-           :icon     [chat-icon/contact-icon-contacts-tab
-                      (multiaccounts/displayed-photo public-key)]
-           :icon-container-style {:padding-horizontal 0}
-           :container-style {:padding-horizontal 0}
-           :chevron  false
-           :on-press #(re-frame/dispatch [:chat.ui/start-chat
-                                          (:public-key public-key)])}])]]]))
+               :else "")
+         (when (= state :valid)
+           [quo/list-item
+            {:key-fn   :address
+             :title    ens-name
+             :subtitle (str (str (string/trim (subs (gfycat/generate-gfy public-key) 0 30)) "...")
+                            " • "
+                            (utils/get-shortened-address public-key))
+             :icon     [chat-icon/contact-icon-contacts-tab
+                        (multiaccounts/displayed-photo public-key)]
+             :icon-container-style {:padding-horizontal 0}
+             :container-style {:padding-horizontal 0}
+             :chevron  false
+             :on-press #(re-frame/dispatch [:chat.ui/start-chat
+                                            (:public-key public-key)])}])]])]))
 
 (defn- nickname-input [entered-nickname]
   [quo/text-input

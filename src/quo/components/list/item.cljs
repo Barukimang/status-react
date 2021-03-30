@@ -56,7 +56,7 @@
     :large))
 
 (defn container [{:keys [size]} & children]
-  (into [rn/view {:style (merge (:tiny 0)
+  (into [rn/view {:style (merge (:tiny spacing/padding-horizontal)
                                 {:min-height       (size->container-size size)
                                  :padding-vertical 8
                                  :flex-direction   :row

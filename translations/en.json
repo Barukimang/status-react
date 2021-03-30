@@ -501,7 +501,7 @@
     "enter-a-private-key": "Enter a private key",
     "enter-a-seed-phrase": "Enter a seed phrase",
     "enter-address": "Enter address",
-    "enter-contact-code": "Enter ENS username or chat key",
+    "enter-contact-code": "ENS (vitalik94) or chat key (0x0…)",
     "enter-pair-code": "Enter your pairing code",
     "pair-code-placeholder": "Pair code...",
     "enter-pair-code-description": "Pairing code was displayed to you during the Keycard setup",

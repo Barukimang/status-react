@@ -1,7 +1,7 @@
 (ns status-im.anon-metrics.interceptors
   (:require [status-im.ethereum.json-rpc :as json-rpc]
             [taoensso.timbre :as log]
-            [re-frame.interceptor :refer [->interceptor get-coeffect]]
+            [re-frame.interceptor :refer [->interceptor]]
             [status-im.utils.platform :as platform]
             [status-im.utils.build :as build]
             [status-im.anon-metrics.transformers :as txf]))

@@ -16,7 +16,8 @@
             [reagent.core :as reagent]
             [quo.react-native :as rn]
             [clojure.string :as string]
-            [status-im.ui.components.invite.views :as invite])
+            [status-im.ui.components.invite.views :as invite]
+            [status-im.ethereum.ens :as ens])
   (:require-macros [status-im.utils.views :as views]))
 
 (defn- render-row [row]
@@ -56,6 +57,8 @@
        [icons/icon icon {:color colors/white-persist}]])))
 
 (defn get-validation-label [value]
+  (println "printing value...")
+  (println value)
   (case value
     :invalid
     (i18n/label :t/user-not-found)
@@ -74,97 +77,109 @@
       (filter filter-fn contacts)
       contacts)))
 
+(defn is-valid-username? [username]
+  (let [is-chat-key? (and (string? username)
+                          (string/starts-with? username "0x")
+                          (= (count username) 132))
+        is-ens? (ens/valid-eth-name-prefix? username)]
+    (or is-chat-key? is-ens?)))
+
 (views/defview new-chat []
   (views/letsubs [contacts      [:contacts/active]
                   {:keys [state ens-name public-key error]} [:contacts/new-identity]
                   search-value (reagent/atom "")]
-    [react/view {:style {:flex 1}}
-     [topbar/topbar
-      {:title  (i18n/label :t/new-chat)
-       :modal? true
-       :right-accessories
-       [{:icon                :qr
-         :accessibility-label :scan-contact-code-button
-         :on-press            #(re-frame/dispatch [::qr-scanner/scan-code
-                                                   {:title   (i18n/label :t/new-chat)
-                                                    :handler :contact/qr-code-scanned}])}]}]
-     [react/view {:flex-direction :row
-                  :padding        16}
-      [react/view {:flex          1}
-       [quo/text-input
-        {:on-change-text
-         #(do
-            (reset! search-value %)
-            (re-frame/dispatch [:set-in [:contacts/new-identity :state] :searching])
-            (debounce/debounce-and-dispatch [:new-chat/set-new-identity %] 600))
-         :on-submit-editing
-         #(when (= state :valid)
-            (debounce/dispatch-and-chill [:contact.ui/contact-code-submitted false nil] 3000))
-         :placeholder         (i18n/label :t/enter-contact-code)
-         :show-cancel         false
-         :accessibility-label :enter-contact-code-input
-         :auto-capitalize     :none
-         :return-key-type     :go}]]]
-     [react/view (if (and
-                      (= (count contacts) 0)
-                      (= @search-value ""))
-                   {:flex 1}
-                   {:justify-content :flex-end})
-      (if (and
-           (= (count contacts) 0)
-           (= @search-value ""))
-        [react/view {:flex 1
-                     :align-items :center
-                     :padding-horizontal 58
-                     :padding-top 160}
-         [quo/text {:size  :base
-                    :align :center
-                    :color :secondary}
-          "You don’t have any contacts yet.\nInvite your friends to start chatting."]
-         [invite/button]]
-        [list/flat-list {:data                      (filter-contacts @search-value contacts)
-                         :key-fn                    :address
-                         :render-fn                 render-row
-                         :enableEmptySections       true
-                         :keyboardShouldPersistTaps :always}])]
-     (when-not (= @search-value "")
-       [react/view
-        [quo/text {:style {:margin-horizontal 16
-                           :margin-vertical 14}
-                   :size  :base
-                   :align :left
-                   :color :secondary}
-         "Non contacts"]
-        (when (= state :searching)
-          [rn/activity-indicator])
-        [quo/text {:style {:margin-horizontal 16}
-                   :size  :base
-                   :align :center
-                   :color :secondary}
-         (cond (= state :error)
-               (get-validation-label error)
+                 [react/view {:style {:flex 1}}
+                  [topbar/topbar
+                   {:title  (i18n/label :t/new-chat)
+                    :modal? true
+                    :right-accessories
+                    [{:icon                :qr
+                      :accessibility-label :scan-contact-code-button
+                      :on-press            #(re-frame/dispatch [::qr-scanner/scan-code
+                                                                {:title   (i18n/label :t/new-chat)
+                                                                 :handler :contact/qr-code-scanned}])}]}]
+                  [react/view {:flex-direction :row
+                               :padding        16}
+                   [react/view {:flex          1}
+                    [quo/text-input
+                     {:on-change-text
+                      #(do
+                         (reset! search-value %)
+                         (println %)
+                         (println (is-valid-username? %))
+                         (re-frame/dispatch [:set-in [:contacts/new-identity :state] :searching])
+                         (debounce/debounce-and-dispatch [:new-chat/set-new-identity %] 600))
+                      :on-submit-editing
+                      #(when (= state :valid)
+                         (debounce/dispatch-and-chill [:contact.ui/contact-code-submitted false nil] 3000))
+                      :placeholder         (i18n/label :t/enter-contact-code)
+                      :show-cancel         false
+                      :accessibility-label :enter-contact-code-input
+                      :auto-capitalize     :none
+                      :return-key-type     :go}]]]
+                  [react/view (if (and
+                                   (= (count contacts) 0)
+                                   (= @search-value ""))
+                                {:flex 1}
+                                {:justify-content :flex-end})
+                   (if (and
+                        (= (count contacts) 0)
+                        (= @search-value ""))
+                     [react/view {:flex 1
+                                  :align-items :center
+                                  :padding-horizontal 58
+                                  :padding-top 160}
+                      [quo/text {:size  :base
+                                 :align :center
+                                 :color :secondary}
+                       "You don’t have any contacts yet.\nInvite your friends to start chatting."]
+                      [invite/button]]
+                     [list/flat-list {:data                      (filter-contacts @search-value contacts)
+                                      :key-fn                    :address
+                                      :render-fn                 render-row
+                                      :enableEmptySections       true
+                                      :keyboardShouldPersistTaps :always}])]
+                  (when-not (= @search-value "")
+                    [react/view
+                     [quo/text {:style {:margin-horizontal 16
+                                        :margin-vertical 14}
+                                :size  :base
+                                :align :left
+                                :color :secondary}
+                      "Non contacts"]
+                     (when (and (= state :searching)
+                                (is-valid-username? @search-value))
+                       [rn/activity-indicator])
+                     [quo/text {:style {:margin-horizontal 16}
+                                :size  :base
+                                :align :center
+                                :color :secondary}
+                      (if (is-valid-username? @search-value)
+                        (cond (= state :error)
+                              (get-validation-label error)
 
-               (= state :valid)
-               (str (if ens-name
-                      ens-name
-                      (gfycat/generate-gfy public-key))
-                    " • ")
+                              (= state :valid)
+                              (str (if ens-name
+                                     ens-name
+                                     (gfycat/generate-gfy public-key))
+                                   " • ")
 
-               :else "")
-         (when (= state :valid)
-           [quo/list-item
-            {:key-fn   :address
-             :title    ens-name
-             :subtitle (str (str (string/trim (subs (gfycat/generate-gfy public-key) 0 30)) "...")
-                            " • "
-                            (utils/get-shortened-address public-key))
-             :icon     [chat-icon/contact-icon-contacts-tab
-                        (multiaccounts/displayed-photo public-key)]
-             :icon-container-style {:padding-horizontal 0}
-             :container-style {:padding-horizontal 0}
-             :chevron  false
-             :on-press #(re-frame/dispatch [:chat.ui/start-chat
-                                            (:public-key public-key)])}])]])]))
+                              :else "")
+                        "Invalid username or chat key")
+                      (when (= state :valid)
+                        [quo/list-item
+                         {:key-fn   :address
+                          :title    ens-name
+                          :subtitle (str (str (string/trim (subs (gfycat/generate-gfy public-key) 0 30)) "...")
+                                         " • "
+                                         (utils/get-shortened-address public-key))
+                          :icon     [chat-icon/contact-icon-contacts-tab
+                                     (multiaccounts/displayed-photo public-key)]
+                          :icon-container-style {:padding-horizontal 0}
+                          :container-style {:padding-horizontal 0}
+                          :chevron  false
+                          :on-press #(re-frame/dispatch [:chat.ui/start-chat
+                                                         (:public-key public-key)])}])]])]))
 
 (defn- nickname-input [entered-nickname]
   [quo/text-input

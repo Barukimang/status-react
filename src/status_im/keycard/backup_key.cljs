@@ -1,5 +1,6 @@
 (ns status-im.keycard.backup-key
   (:require [status-im.utils.fx :as fx]
+            [status-im.ethereum.mnemonic :as mnemonic]
             [status-im.multiaccounts.recover.core :as multiaccounts.recover]
             [status-im.navigation :as navigation]
             [taoensso.timbre :as log]))
@@ -16,7 +17,10 @@
 (fx/defn start-keycard-backup
   {:events [::start-keycard-backup]}
   [{:keys [db] :as cofx}]
-  {::multiaccounts.recover/import-multiaccount {:passphrase (get-in db [:multiaccounts/key-storage :seed-phrase])
+  {::multiaccounts.recover/import-multiaccount {:passphrase (-> db
+                                                                :multiaccounts/key-storage
+                                                                :seed-phrase
+                                                                mnemonic/sanitize-passphrase)
                                                 :password nil
                                                 :success-event ::create-backup-card}})
 (fx/defn create-backup-card

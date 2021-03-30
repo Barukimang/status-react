@@ -53,8 +53,6 @@
     (= s (string/lower-case s))))
 
 (defn valid-username? [username]
-  (println "lelellele")
-  (println username)
   (boolean
    (and (lower-case? username)
         (re-find #"^[a-z0-9]+$" username))))
